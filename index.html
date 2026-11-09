@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radio en directo</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100svh;background:#071925;color:#f5f6ed;font-family:system-ui,sans-serif;display:grid;place-items:center;padding:24px;background-image:radial-gradient(ellipse at top right,#18485c,transparent 65%)}main{width:min(100%,480px)}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:60px}header strong{letter-spacing:3px}small,.muted{color:#9db3bf}.badge{border:1px solid #48616c;padding:8px 12px;border-radius:30px;font-size:12px}.dot{color:#d4f35c}h1{font-size:clamp(52px,13vw,80px);letter-spacing:-5px;line-height:1;margin:18px 0}p{line-height:1.6}.card{margin-top:36px;background:#ffffff08;border:1px solid #ffffff20;padding:28px;border-radius:24px}.wave{height:64px;display:flex;gap:7px;align-items:center;justify-content:center;margin:12px 0 28px}.wave i{width:6px;height:18px;background:#d4f35c;border-radius:8px}.wave i:nth-child(3n){height:48px}.wave i:nth-child(2n){height:32px}.playing .wave i{animation:pulse .8s ease-in-out infinite alternate}.wave i:nth-child(2n){animation-delay:.3s}@keyframes pulse{to{transform:scaleY(.35)}}button{cursor:pointer;border:0;border-radius:14px;background:#d4f35c;color:#14200a;font:700 17px system-ui;width:100%;padding:18px}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid white;outline-offset:5px}.volume{display:flex;align-items:center;gap:15px;margin-top:25px;font-size:13px}input{width:100%;accent-color:#d4f35c}#status{text-align:center;font-size:13px;min-height:22px;margin-bottom:0}footer{margin-top:30px;font-size:12px;line-height:1.8}a{color:#c9e3ee}@media(prefers-reduced-motion:reduce){.playing .wave i{animation:none}}
+.stations{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px}.stations button{flex:1 1 130px;min-width:0;background:#173544;color:#c9e3ee;border:1px solid #48616c;padding:16px 10px;font-size:15px}.stations button[aria-pressed="true"]{background:#d4f35c;color:#14200a;border-color:#d4f35c}
+</style>
+<main>
+<header><strong>RADIO / DIRECTO</strong><span class="badge"><span class="dot">●</span> EN DIRECTO</span></header>
+<small>TU COMPAÑÍA, A UN CLIC</small>
+<h1>La radio.<br>Siempre cerca.</h1>
+<p class="muted">Cadena SER, Radio Clásica y una emisora misteriosa.</p>
+<section class="card" aria-label="Reproductor de radio">
+<div class="stations" role="group" aria-label="Emisora"><button type="button" data-station="ser" aria-pressed="true">Cadena SER</button><button type="button" data-station="clasica" aria-pressed="false">Radio Clásica · RNE</button><button type="button" data-station="misteriosa" aria-pressed="false">Radio misteriosa</button></div><div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<button id="play" type="button">▶ Escuchar en directo</button>
+<label class="volume">Volumen <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"><span id="level">80%</span></label>
+<p id="status" role="status" aria-live="polite">Pulsa para sintonizar</p>
+</section>
+<footer>Reproductor independiente, sin afiliación con las emisoras.<br>Necesita conexión a internet. <a href="https://cadenaser.com/cadena-ser/" target="_blank" rel="noopener">Abrir la página de la emisora ↗</a></footer>
+<audio id="audio" preload="none"></audio>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js"></script>
+<script>
+const audio=document.querySelector('#audio'),play=document.querySelector('#play'),status=document.querySelector('#status'),volume=document.querySelector('#volume'),level=document.querySelector('#level');
+let active=false,hls=null,version=0; const station={value:"ser"};
+audio.volume=.8;
+function stopped(message){version++;if(hls){hls.destroy();hls=null;}active=false;audio.pause();audio.removeAttribute('src');audio.load();document.body.classList.remove('playing');play.textContent='▶ Escuchar en directo';status.textContent=message;}
+play.onclick=async()=>{if(active){stopped('Emisión detenida');return;}active=true;const token=++version;play.textContent='■ Detener';status.textContent='Conectando…';const begin=async()=>{try{await audio.play();}catch(e){if(active&&token===version)stopped('No se pudo conectar. Reintenta o abre la página de la emisora.');}};if(station.value==='clasica'){const url='https://rtvelivestream.rtve.es/rtvesec/rne/rne_r2_main.m3u8';if(audio.canPlayType('application/vnd.apple.mpegurl')){audio.src=url;begin();}else if(window.Hls&&Hls.isSupported()){hls=new Hls();hls.loadSource(url);hls.attachMedia(audio);hls.on(Hls.Events.MANIFEST_PARSED,()=>{if(token===version)begin();});hls.on(Hls.Events.ERROR,(_,d)=>{if(d.fatal&&token===version)stopped('No se pudo conectar. Abre la página de la emisora.');});}else stopped('Reproductor no disponible. Abre la página de la emisora.');}else{audio.src=station.value==='misteriosa'?'http://213.141.131.10:8000/slavonicneofolk':'https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3';begin();}};
+document.querySelectorAll("[data-station]").forEach(button=>button.onclick=()=>{if(station.value===button.dataset.station&&active)return;station.value=button.dataset.station;document.querySelectorAll("[data-station]").forEach(item=>item.setAttribute("aria-pressed",String(item===button)));const resume=true;stopped('Pulsa para sintonizar');document.querySelector('footer a').href=station.value==='misteriosa'?'https://radivu.com/listen/radio-caprice-slavonic':station.value==='clasica'?'https://www.rtve.es/play/radio/radio-clasica/':'https://cadenaser.com/cadena-ser/';if(resume)play.onclick();});
+audio.onplaying=()=>{document.body.classList.add('playing');status.textContent='● Escuchando en directo';};
+audio.onwaiting=()=>{if(active){document.body.classList.remove('playing');status.textContent='Cargando la emisión…';}};
+audio.onerror=()=>{if(active)stopped('Emisión no disponible. Reintenta o abre la página de la emisora.');};
+audio.onended=()=>stopped('La emisión se ha interrumpido. Pulsa para reconectar.');
+volume.oninput=()=>{audio.volume=Number(volume.value);level.textContent=Math.round(audio.volume*100)+'%';};
+</script>
+</html>
+
